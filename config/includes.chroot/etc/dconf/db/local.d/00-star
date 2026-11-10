@@ -1,0 +1,11 @@
+[org/gnome/desktop/interface]
+color-scheme='prefer-dark'
+font-name='Inter 10'
+
+[org/gnome/desktop/background]
+picture-uri='file:///usr/share/backgrounds/star/star-quiet-universe.svg'
+picture-uri-dark='file:///usr/share/backgrounds/star/star-quiet-universe.svg'
+picture-options='zoom'
+
+[org/gnome/shell]
+favorite-apps=['org.gnome.Nautilus.desktop', 'firefox-esr.desktop', 'org.gnome.Console.desktop', 'org.gnome.TextEditor.desktop', 'org.gnome.SystemMonitor.desktop']
