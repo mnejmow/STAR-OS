@@ -1,0 +1,14 @@
+/.build/
+/.binary/
+/.chroot/
+/.stage/
+/cache/
+/config/binary
+/config/bootstrap
+/config/chroot
+/config/common
+/config/source
+/*.iso
+/*.list
+/output/*
+!/output/.gitkeep
