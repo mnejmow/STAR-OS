@@ -47,18 +47,26 @@ jobs:
           dpkg-query -W -f='${Status} ${Version}\n' ovmf
           echo "Available OVMF firmware files:"
           find /usr/share -type f \( -iname 'OVMF_CODE*.fd' -o -iname 'OVMF*.fd' \) -print
-          OVMF="$(find /usr/share -type f -iname 'OVMF_CODE*.fd' -print -quit)"
-          if [[ -z "$OVMF" ]]; then
-            echo "::error::OVMF firmware image not found. Package contents:"
+          OVMF="$(find /usr/share -type f -name 'OVMF_CODE_4M.fd' -print -quit)"
+          OVMF_VARS="$(find /usr/share -type f -name 'OVMF_VARS_4M.fd' -print -quit)"
+          if [[ -z "$OVMF" || -z "$OVMF_VARS" ]]; then
+            echo "::error::Matching OVMF_CODE_4M.fd and OVMF_VARS_4M.fd files are required."
             dpkg -L ovmf || true
             exit 1
           fi
-          echo "Using UEFI firmware: $OVMF"
+          echo "Using UEFI code firmware: $OVMF"
+          echo "Using UEFI variable template: $OVMF_VARS"
           test -r "$OVMF"
+          test -r "$OVMF_VARS"
+          UEFI_VARS="$PWD/output/OVMF_VARS_4M.test.fd"
+          cp "$OVMF_VARS" "$UEFI_VARS"
           for mode in bios uefi; do
             log="$PWD/output/qemu-${mode}.log"
-            args=(-machine accel=tcg -m 4096 -smp 2 -cdrom "$ISO" -boot d -display none -serial none -monitor none -no-reboot -no-shutdown)
-            if [[ "$mode" == uefi ]]; then args+=(-bios "$OVMF"); fi
+            args=(-machine q35,accel=tcg -m 4096 -smp 2 -cdrom "$ISO" -boot order=d -display none -serial none -monitor none -no-reboot -no-shutdown)
+            if [[ "$mode" == uefi ]]; then
+              args+=(-drive "if=pflash,format=raw,unit=0,readonly=on,file=$OVMF")
+              args+=(-drive "if=pflash,format=raw,unit=1,file=$UEFI_VARS")
+            fi
             set +e
             timeout 120s qemu-system-x86_64 "${args[@]}" >"$log" 2>&1
             status=$?
