@@ -29,6 +29,8 @@ jobs:
             mtools dosfstools rsync ca-certificates gnupg apt-utils \
             qemu-system-x86 ovmf
       - uses: actions/checkout@v4
+      - name: Set executable permissions
+        run: chmod +x build.sh clean.sh test-qemu.sh config/hooks/normal/*.hook.chroot
       - name: Build hybrid BIOS/UEFI ISO
         run: ./build.sh
       - name: Verify ISO boot catalog and checksum
@@ -53,6 +55,7 @@ jobs:
             status=$?
             set -e
             if [[ $status -ne 124 && $status -ne 0 ]]; then cat "$log"; exit "$status"; fi
+            echo "$mode QEMU smoke test ended with status $status"
           done
       - uses: actions/upload-artifact@v4
         with:
