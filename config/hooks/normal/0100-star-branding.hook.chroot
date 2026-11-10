@@ -1,0 +1,22 @@
+#!/bin/sh
+set -eu
+install -d -m 0755 /usr/share/star
+cat > /usr/share/star/BUILD-INFO <<'INFO'
+STAR OS 1.0 Stellar Edition
+Design: The Quiet Universe
+Base: Debian 13 Trixie
+Desktop: GNOME
+Architecture: amd64
+Profile: Light / 4 GB RAM target
+INFO
+if [ -f /lib/systemd/system/zramswap.service ] || [ -f /usr/lib/systemd/system/zramswap.service ]; then
+    systemctl enable zramswap.service >/dev/null 2>&1 || true
+fi
+if command -v dconf >/dev/null 2>&1; then dconf update; fi
+install -d -m 0755 /etc/skel/.config/gtk-3.0
+cat > /etc/skel/.config/gtk-3.0/settings.ini <<'GTK'
+[Settings]
+gtk-application-prefer-dark-theme=1
+gtk-font-name=Inter 10
+GTK
+exit 0
