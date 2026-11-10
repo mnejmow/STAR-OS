@@ -43,9 +43,18 @@ jobs:
         run: |
           set -euo pipefail
           ISO="$PWD/output/STAR-1.0-amd64.iso"
-          OVMF="/usr/share/OVMF/OVMF_CODE_4M.fd"
-          [[ -f "$OVMF" ]] || OVMF="/usr/share/OVMF/OVMF_CODE.fd"
-          test -f "$OVMF"
+          echo "Installed OVMF package:"
+          dpkg-query -W -f='${Status} ${Version}\n' ovmf
+          echo "Available OVMF firmware files:"
+          find /usr/share -type f \( -iname 'OVMF_CODE*.fd' -o -iname 'OVMF*.fd' \) -print
+          OVMF="$(find /usr/share -type f -iname 'OVMF_CODE*.fd' -print -quit)"
+          if [[ -z "$OVMF" ]]; then
+            echo "::error::OVMF firmware image not found. Package contents:"
+            dpkg -L ovmf || true
+            exit 1
+          fi
+          echo "Using UEFI firmware: $OVMF"
+          test -r "$OVMF"
           for mode in bios uefi; do
             log="$PWD/output/qemu-${mode}.log"
             args=(-machine accel=tcg -m 4096 -smp 2 -cdrom "$ISO" -boot d -display none -serial none -monitor none -no-reboot -no-shutdown)
