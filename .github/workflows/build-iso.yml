@@ -1,0 +1,66 @@
+name: Build STAR OS ISO
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'auto/**'
+      - 'config/**'
+      - 'branding/**'
+      - 'build.sh'
+      - 'test-qemu.sh'
+      - '.github/workflows/build-iso.yml'
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: debian:trixie
+      options: --privileged
+    timeout-minutes: 360
+    steps:
+      - name: Install Debian 13 build and VM test tools
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            live-build debootstrap squashfs-tools xorriso \
+            grub-pc-bin grub-efi-amd64-bin isolinux syslinux-common \
+            mtools dosfstools rsync ca-certificates gnupg apt-utils \
+            qemu-system-x86 ovmf
+      - uses: actions/checkout@v4
+      - name: Build hybrid BIOS/UEFI ISO
+        run: ./build.sh
+      - name: Verify ISO boot catalog and checksum
+        run: |
+          cd output
+          sha256sum -c STAR-1.0-amd64.iso.sha256
+          xorriso -indev STAR-1.0-amd64.iso -report_el_torito as_mkisofs
+      - name: BIOS and UEFI QEMU boot smoke tests (4 GiB)
+        shell: bash
+        run: |
+          set -euo pipefail
+          ISO="$PWD/output/STAR-1.0-amd64.iso"
+          OVMF="/usr/share/OVMF/OVMF_CODE_4M.fd"
+          [[ -f "$OVMF" ]] || OVMF="/usr/share/OVMF/OVMF_CODE.fd"
+          test -f "$OVMF"
+          for mode in bios uefi; do
+            log="$PWD/output/qemu-${mode}.log"
+            args=(-machine accel=tcg -m 4096 -smp 2 -cdrom "$ISO" -boot d -display none -serial none -monitor none -no-reboot -no-shutdown)
+            if [[ "$mode" == uefi ]]; then args+=(-bios "$OVMF"); fi
+            set +e
+            timeout 120s qemu-system-x86_64 "${args[@]}" >"$log" 2>&1
+            status=$?
+            set -e
+            if [[ $status -ne 124 && $status -ne 0 ]]; then cat "$log"; exit "$status"; fi
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: STAR-OS-1.0-amd64-BIOS-UEFI
+          path: |
+            output/STAR-1.0-amd64.iso
+            output/STAR-1.0-amd64.iso.sha256
+            output/qemu-bios.log
+            output/qemu-uefi.log
+          if-no-files-found: error
+          retention-days: 14
