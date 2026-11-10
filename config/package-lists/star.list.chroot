@@ -23,9 +23,9 @@ gnome-disk-utility
 gnome-keyring
 gnome-screenshot
 file-roller
-evince
+papers
 loupe
-network-manager-gnome
+network-manager-applet
 gnome-tweaks
 dconf-cli
 debian-installer-launcher
