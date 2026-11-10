@@ -1,0 +1,10 @@
+NAME="STAR OS"
+PRETTY_NAME="STAR OS 1.0 Stellar Edition"
+ID=star
+ID_LIKE=debian
+VERSION="1.0"
+VERSION_ID="1.0"
+VERSION_CODENAME=stellar
+HOME_URL="https://github.com/mnejmow/STAR-OS"
+SUPPORT_URL="https://github.com/mnejmow/STAR-OS/issues"
+BUG_REPORT_URL="https://github.com/mnejmow/STAR-OS/issues"
