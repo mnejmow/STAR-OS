@@ -1,0 +1,11 @@
+{
+  "name": "STAR Emoji",
+  "version": "1.0",
+  "status": "planned",
+  "categories": {
+    "stellar": ["star-core", "supernova", "nebula", "orbit", "constellation"],
+    "technology": ["terminal", "processor", "circuit", "server", "network"],
+    "system": ["success", "warning", "error", "update", "security"]
+  },
+  "note": "Original SVG artwork planned; Unicode emoji are used as fallback."
+}
