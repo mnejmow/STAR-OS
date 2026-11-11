@@ -87,15 +87,23 @@ def main():
                     raise RuntimeError("Could not connect to QEMU monitor for " + mode)
                 monitor.settimeout(4)
 
+                # Preserve evidence of the actual boot menu before selecting
+                # the default Live system entry.
+                time.sleep(3)
+                screenshot(monitor, EVIDENCE / (mode + "-boot-menu.ppm"))
+                print("[STAR] Captured " + mode + "-boot-menu.ppm", flush=True)
+
                 # The Debian live image presents an interactive boot menu with
                 # no automatic timeout. In CI there is no real keyboard user,
                 # so explicitly choose the default "Live system" entry.
-                time.sleep(3)
                 monitor_command(monitor, "sendkey ret")
                 print("[STAR] Selected the default Live system entry", flush=True)
+                time.sleep(8)
+                screenshot(monitor, EVIDENCE / (mode + "-post-boot.ppm"))
+                print("[STAR] Captured " + mode + "-post-boot.ppm", flush=True)
 
                 # Give firmware, bootloader and live system time to render.
-                checkpoints = [60, 120, 180, 240, TIMEOUT]
+                checkpoints = [30, 60, 120, 180, 240, TIMEOUT]
                 started = time.monotonic()
                 for checkpoint in checkpoints:
                     remaining = checkpoint - (time.monotonic() - started)
@@ -116,7 +124,11 @@ def main():
                     raise RuntimeError(mode + " framebuffer is blank or invalid")
                 ocr = subprocess.run(["tesseract", str(final_image), "stdout"], capture_output=True, text=True, check=True).stdout
                 (EVIDENCE / (mode + "-ocr.txt")).write_text(ocr)
-                if "activities" not in ocr.lower():
+                ocr_lower = ocr.lower()
+                # GNOME may render "Type to search" instead of the traditional
+                # "Activities" label in the overview. Accept either signature.
+                desktop_markers = ("activities", "type to search")
+                if not any(marker in ocr_lower for marker in desktop_markers):
                     raise RuntimeError(mode + " did not reach the GNOME desktop; OCR evidence: " + repr(ocr[:500]))
                 results.append(mode + ": GNOME desktop confirmed (%dx%d)" % image.size)
                 monitor.close()
