@@ -27,7 +27,7 @@ jobs:
             live-build debootstrap squashfs-tools xorriso \
             grub-pc-bin grub-efi-amd64-bin isolinux syslinux-common \
             mtools dosfstools rsync ca-certificates gnupg apt-utils \
-            qemu-system-x86 ovmf
+            qemu-system-x86 qemu-system-gui ovmf xvfb python3 python3-pil tesseract-ocr
       - uses: actions/checkout@v4
       - name: Set executable permissions
         run: chmod +x auto/config build.sh clean.sh test-qemu.sh config/hooks/normal/*.hook.chroot
@@ -38,42 +38,11 @@ jobs:
           cd output
           sha256sum -c STAR-1.0-amd64.iso.sha256
           xorriso -indev STAR-1.0-amd64.iso -report_el_torito as_mkisofs
-      - name: BIOS and UEFI QEMU boot smoke tests (4 GiB)
+      - name: BIOS and UEFI graphical boot verification (4 GiB)
         shell: bash
         run: |
           set -euo pipefail
-          ISO="$PWD/output/STAR-1.0-amd64.iso"
-          echo "Installed OVMF package:"
-          dpkg-query -W -f='\${Status} \${Version}\\n' ovmf
-          echo "Available OVMF firmware files:"
-          find /usr/share -type f \( -iname 'OVMF_CODE*.fd' -o -iname 'OVMF*.fd' \) -print
-          OVMF="$(find /usr/share -type f -name 'OVMF_CODE_4M.fd' -print -quit)"
-          OVMF_VARS="$(find /usr/share -type f -name 'OVMF_VARS_4M.fd' -print -quit)"
-          if [[ -z "$OVMF" || -z "$OVMF_VARS" ]]; then
-            echo "::error::Matching OVMF_CODE_4M.fd and OVMF_VARS_4M.fd files are required."
-            dpkg -L ovmf || true
-            exit 1
-          fi
-          echo "Using UEFI code firmware: $OVMF"
-          echo "Using UEFI variable template: $OVMF_VARS"
-          test -r "$OVMF"
-          test -r "$OVMF_VARS"
-          UEFI_VARS="$PWD/output/OVMF_VARS_4M.test.fd"
-          cp "$OVMF_VARS" "$UEFI_VARS"
-          for mode in bios uefi; do
-            log="$PWD/output/qemu-${mode}.log"
-            args=(-machine q35,accel=tcg -m 4096 -smp 2 -cdrom "$ISO" -boot order=d -display none -serial none -monitor none -no-reboot -no-shutdown)
-            if [[ "$mode" == uefi ]]; then
-              args+=(-drive "if=pflash,format=raw,unit=0,readonly=on,file=$OVMF")
-              args+=(-drive "if=pflash,format=raw,unit=1,file=$UEFI_VARS")
-            fi
-            set +e
-            timeout 120s qemu-system-x86_64 "${args[@]}" >"$log" 2>&1
-            status=$?
-            set -e
-            if [[ $status -ne 124 && $status -ne 0 ]]; then cat "$log"; exit "$status"; fi
-            echo "$mode QEMU smoke test ended with status $status"
-          done
+          xvfb-run -a python3 tests/qemu-boot-evidence.py
       - name: Split ISO into download-safe parts
         shell: bash
         run: |
@@ -125,7 +94,6 @@ jobs:
           name: STAR-OS-1.0-tests
           path: |
             output/STAR-1.0-amd64.iso.sha256
-            output/qemu-bios.log
-            output/qemu-uefi.log
+            output/boot-evidence/**
           if-no-files-found: error
           retention-days: 14
