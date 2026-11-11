@@ -27,7 +27,7 @@ jobs:
             live-build debootstrap squashfs-tools xorriso \
             grub-pc-bin grub-efi-amd64-bin isolinux syslinux-common \
             mtools dosfstools rsync ca-certificates gnupg apt-utils \
-            qemu-system-x86 ovmf
+            qemu-system-x86 ovmf xvfb python3
       - uses: actions/checkout@v4
       - name: Set executable permissions
         run: chmod +x auto/config build.sh clean.sh test-qemu.sh config/hooks/normal/*.hook.chroot
@@ -73,6 +73,58 @@ jobs:
             set -e
             if [[ $status -ne 124 && $status -ne 0 ]]; then cat "$log"; exit "$status"; fi
             echo "$mode QEMU smoke test ended with status $status"
+          done
+      - name: Graphical BIOS and UEFI boot evidence (4 GiB)
+        shell: bash
+        run: |
+          set -euo pipefail
+          ISO="$PWD/output/STAR-1.0-amd64.iso"
+          OVMF="$(find /usr/share -type f -name 'OVMF_CODE_4M.fd' -print -quit)"
+          OVMF_VARS="$(find /usr/share -type f -name 'OVMF_VARS_4M.fd' -print -quit)"
+          test -r "$OVMF" && test -r "$OVMF_VARS"
+          cp "$OVMF_VARS" "$PWD/output/OVMF_VARS_4M.test.fd"
+          for mode in bios uefi; do
+            shot="$PWD/output/qemu-${mode}.ppm"
+            mon="$PWD/output/qemu-${mode}.monitor"
+            log="$PWD/output/qemu-${mode}.graphical.log"
+            rm -f "$shot" "$mon"
+            args=(-machine q35,accel=tcg -m 4096 -smp 2 -cdrom "$ISO" -boot order=d -display gtk -monitor "unix:$mon,server=on,wait=off" -no-reboot -no-shutdown)
+            if [[ "$mode" == uefi ]]; then
+              args+=(-drive "if=pflash,format=raw,unit=0,readonly=on,file=$OVMF")
+              args+=(-drive "if=pflash,format=raw,unit=1,file=$PWD/output/OVMF_VARS_4M.test.fd")
+            fi
+            Xvfb :99 -screen 0 1280x800x24 >/dev/null 2>&1 &
+            xvfb_pid=$!
+            export DISPLAY=:99
+            qemu-system-x86_64 "${args[@]}" >"$log" 2>&1 &
+            qemu_pid=$!
+            for _ in $(seq 1 30); do [[ -S "$mon" ]] && break; sleep 1; done
+            [[ -S "$mon" ]] || { cat "$log"; kill "$qemu_pid" 2>/dev/null || true; kill "$xvfb_pid" 2>/dev/null || true; exit 1; }
+            sleep 75
+            python3 - "$mon" "$shot" <<'PY'
+import socket,sys,time
+mon,shot=sys.argv[1:]
+s=socket.socket(socket.AF_UNIX,socket.SOCK_STREAM); s.settimeout(10); s.connect(mon)
+time.sleep(1); s.sendall(("screendump "+shot+"\r").encode()); time.sleep(2); s.sendall(b"quit\r"); s.close()
+PY
+            wait "$qemu_pid" || true
+            kill "$xvfb_pid" 2>/dev/null || true
+            test -s "$shot"
+            python3 - "$shot" <<'PY'
+import sys
+p=sys.argv[1]
+with open(p,'rb') as f:
+    if f.readline().strip()!=b'P6': raise SystemExit('invalid PPM')
+    dims=f.readline().split()
+    while dims and dims[0].startswith(b'#'): dims=f.readline().split()
+    w,h=map(int,dims); maxv=int(f.readline()); data=f.read()
+if maxv!=255 or not data: raise SystemExit('invalid screenshot')
+n=sum(1 for i in range(0,len(data)-2,3) if data[i]>8 or data[i+1]>8 or data[i+2]>8)
+ratio=n/(w*h)
+print('screen %dx%d non-black ratio %.4f' % (w,h,ratio))
+if ratio<0.01: raise SystemExit('guest framebuffer is effectively blank')
+PY
+            echo "[STAR] $mode graphical framebuffer is non-blank."
           done
       - name: Split ISO into download-safe parts
         shell: bash
