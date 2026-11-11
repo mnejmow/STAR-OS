@@ -106,7 +106,11 @@ def main():
                 stat = ImageStat.Stat(image)
                 if image.width < 640 or image.height < 400 or max(stat.stddev) < 3:
                     raise RuntimeError(mode + " framebuffer is blank or invalid")
-                results.append(mode + ": framebuffer captured (%dx%d)" % image.size)
+                ocr = subprocess.run(["tesseract", str(final_image), "stdout"], capture_output=True, text=True, check=True).stdout
+                (EVIDENCE / (mode + "-ocr.txt")).write_text(ocr)
+                if "activities" not in ocr.lower():
+                    raise RuntimeError(mode + " did not reach the GNOME desktop; OCR evidence: " + repr(ocr[:500]))
+                results.append(mode + ": GNOME desktop confirmed (%dx%d)" % image.size)
                 monitor.close()
             finally:
                 if proc.poll() is None:
