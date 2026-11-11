@@ -1,4 +1,5 @@
 name: Build STAR OS ISO
+# Graphical boot test fixes are intentionally included in the rebuild trigger.
 on:
   workflow_dispatch:
   push:
