@@ -44,7 +44,7 @@ jobs:
           set -euo pipefail
           ISO="$PWD/output/STAR-1.0-amd64.iso"
           echo "Installed OVMF package:"
-          dpkg-query -W -f='${Status} ${Version}\n' ovmf
+          dpkg-query -W -f='\${Status} \${Version}\\n' ovmf
           echo "Available OVMF firmware files:"
           find /usr/share -type f \( -iname 'OVMF_CODE*.fd' -o -iname 'OVMF*.fd' \) -print
           OVMF="$(find /usr/share -type f -name 'OVMF_CODE_4M.fd' -print -quit)"
@@ -74,11 +74,56 @@ jobs:
             if [[ $status -ne 124 && $status -ne 0 ]]; then cat "$log"; exit "$status"; fi
             echo "$mode QEMU smoke test ended with status $status"
           done
+      - name: Split ISO into download-safe parts
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd output
+          split -b 450M -d -a 2 STAR-1.0-amd64.iso STAR-1.0-amd64.iso.part-
+          sha256sum STAR-1.0-amd64.iso > STAR-1.0-amd64.iso.full.sha256
+          ls -lh STAR-1.0-amd64.iso.part-* STAR-1.0-amd64.iso.full.sha256
       - uses: actions/upload-artifact@v4
         with:
-          name: STAR-OS-1.0-amd64-BIOS-UEFI
+          name: STAR-OS-1.0-part-01
           path: |
-            output/STAR-1.0-amd64.iso
+            output/STAR-1.0-amd64.iso.part-00
+            output/STAR-1.0-amd64.iso.full.sha256
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: STAR-OS-1.0-part-02
+          path: output/STAR-1.0-amd64.iso.part-01
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: STAR-OS-1.0-part-03
+          path: output/STAR-1.0-amd64.iso.part-02
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: STAR-OS-1.0-part-04
+          path: output/STAR-1.0-amd64.iso.part-03
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: STAR-OS-1.0-part-05
+          path: output/STAR-1.0-amd64.iso.part-04
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: STAR-OS-1.0-part-06
+          path: output/STAR-1.0-amd64.iso.part-05
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: STAR-OS-1.0-tests
+          path: |
             output/STAR-1.0-amd64.iso.sha256
             output/qemu-bios.log
             output/qemu-uefi.log
