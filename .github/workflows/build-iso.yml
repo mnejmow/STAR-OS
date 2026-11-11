@@ -27,7 +27,7 @@ jobs:
             live-build debootstrap squashfs-tools xorriso \
             grub-pc-bin grub-efi-amd64-bin isolinux syslinux-common \
             mtools dosfstools rsync ca-certificates gnupg apt-utils \
-            qemu-system-x86 qemu-system-gui ovmf xvfb python3 python3-pil tesseract-ocr
+            qemu-system-x86 qemu-system-gui ovmf xvfb xauth python3 python3-pil tesseract-ocr
       - uses: actions/checkout@v4
       - name: Set executable permissions
         run: chmod +x auto/config build.sh clean.sh test-qemu.sh config/hooks/normal/*.hook.chroot
