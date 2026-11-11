@@ -86,6 +86,14 @@ def main():
                 if monitor is None:
                     raise RuntimeError("Could not connect to QEMU monitor for " + mode)
                 monitor.settimeout(4)
+
+                # The Debian live image presents an interactive boot menu with
+                # no automatic timeout. In CI there is no real keyboard user,
+                # so explicitly choose the default "Live system" entry.
+                time.sleep(3)
+                monitor_command(monitor, "sendkey ret")
+                print("[STAR] Selected the default Live system entry", flush=True)
+
                 # Give firmware, bootloader and live system time to render.
                 checkpoints = [60, 120, 180, 240, TIMEOUT]
                 started = time.monotonic()
