@@ -46,6 +46,14 @@ jobs:
         run: |
           set -euo pipefail
           xvfb-run -a python3 tests/qemu-boot-evidence.py
+      - name: Upload boot screenshots and logs even when verification fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: STAR-OS-boot-evidence
+          path: output/boot-evidence/**
+          if-no-files-found: warn
+          retention-days: 14
       - name: Split ISO into download-safe parts
         shell: bash
         run: |
