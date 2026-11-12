@@ -94,12 +94,30 @@ def main():
                 print("[STAR] Captured " + mode + "-boot-menu.ppm", flush=True)
 
                 # The Debian live image presents an interactive boot menu with
-                # no automatic timeout. In CI there is no real keyboard user,
-                # so explicitly choose the default "Live system" entry.
-                monitor_command(monitor, "sendkey ret")
-                print("[STAR] Selected the default Live system entry", flush=True)
-                time.sleep(8)
-                screenshot(monitor, EVIDENCE / (mode + "-post-boot.ppm"))
+                # no automatic timeout. Inject Enter through the QEMU monitor,
+                # then inspect the framebuffer. Some UEFI/OVMF combinations can
+                # miss the first short key event, so retry with a held keypad
+                # Enter only when the menu is still visibly present.
+                from PIL import Image
+                menu_ocr = subprocess.run(
+                    ["tesseract", str(EVIDENCE / (mode + "-boot-menu.ppm")), "stdout"],
+                    capture_output=True, text=True, check=True
+                ).stdout.lower()
+                monitor_command(monitor, "sendkey ret 500")
+                time.sleep(5)
+                post_boot = EVIDENCE / (mode + "-post-boot.ppm")
+                screenshot(monitor, post_boot)
+                post_ocr = subprocess.run(
+                    ["tesseract", str(post_boot), "stdout"],
+                    capture_output=True, text=True, check=True
+                ).stdout.lower()
+                menu_markers = ("live system", "start installer", "enter: boot")
+                if any(marker in post_ocr for marker in menu_markers):
+                    print("[STAR] Menu still visible; retrying with keypad Enter", flush=True)
+                    monitor_command(monitor, "sendkey kp_enter 1000")
+                    time.sleep(5)
+                    screenshot(monitor, post_boot)
+                print("[STAR] Sent boot selection for " + mode.upper(), flush=True)
                 print("[STAR] Captured " + mode + "-post-boot.ppm", flush=True)
 
                 # Give firmware, bootloader and live system time to render.
