@@ -1,0 +1,74 @@
+name: Publish STAR OS part 01 as direct download
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Successful build run containing STAR-OS-1.0-part-01"
+        required: true
+        default: "43126889734"
+      tag_name:
+        description: "Release tag"
+        required: true
+        default: "star-os-1.0"
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate inputs and identify source build
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.run_id }}
+          TAG_NAME: ${{ inputs.tag_name }}
+          REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]] || { echo "Invalid run ID"; exit 1; }
+          HEAD_SHA="$(gh run view "$RUN_ID" --repo "$REPO" --json headSha --jq .headSha)"
+          [[ "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "Could not identify source commit"; exit 1; }
+          echo "head_sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Download only the existing first artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.run_id }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p extracted
+          gh run download "$RUN_ID" --repo "$REPO" --name "STAR-OS-1.0-part-01" --dir extracted
+          PART="$(find extracted -type f -name 'STAR-1.0-amd64.iso.part-00' -print -quit)"
+          CHECKSUM="$(find extracted -type f -name 'STAR-1.0-amd64.iso.full.sha256' -print -quit)"
+          test -n "$PART" && test -s "$PART"
+          test -n "$CHECKSUM" && test -s "$CHECKSUM"
+          SIZE="$(stat -c '%s' "$PART")"
+          test "$SIZE" -eq 471859200 || { echo "Unexpected part size: $SIZE bytes"; exit 1; }
+          cp "$PART" STAR-1.0-amd64.iso.part-00
+          cp "$CHECKSUM" STAR-1.0-amd64.iso.full.sha256
+          sha256sum STAR-1.0-amd64.iso.part-00 | tee STAR-1.0-amd64.iso.part-00.sha256
+
+      - name: Create or update release and upload direct files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TAG_NAME: ${{ inputs.tag_name }}
+          HEAD_SHA: ${{ steps.source.outputs.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! gh release view "$TAG_NAME" --repo "$REPO" >/dev/null 2>&1; then
+            gh release create "$TAG_NAME" --repo "$REPO" --target "$HEAD_SHA" \
+              --title "STAR OS 1.0 — download parts" \
+              --notes "Direct-download assets for the existing STAR OS 1.0 build. This release does not rebuild the ISO."
+          fi
+          gh release upload "$TAG_NAME" --repo "$REPO" --clobber \
+            STAR-1.0-amd64.iso.part-00 \
+            STAR-1.0-amd64.iso.full.sha256 \
+            STAR-1.0-amd64.iso.part-00.sha256
