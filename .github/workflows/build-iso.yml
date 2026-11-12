@@ -11,6 +11,7 @@ on:
       - 'branding/**'
       - 'build.sh'
       - 'test-qemu.sh'
+      - 'tests/**'
       - '.github/workflows/build-iso.yml'
 permissions:
   contents: read
