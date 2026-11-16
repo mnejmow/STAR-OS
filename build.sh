@@ -5,7 +5,7 @@ cd "$ROOT"
 if [[ "$EUID" -ne 0 ]]; then echo "Run with: sudo ./build.sh" >&2; exit 1; fi
 for cmd in lb xorriso mksquashfs; do command -v "$cmd" >/dev/null 2>&1 || { echo "Missing build dependency: $cmd" >&2; exit 1; }; done
 mkdir -p output
-echo "[STAR] Configuring Debian 13 GNOME live system..."
+echo "[STAR] Configuring Debian 13 XFCE live system..."
 lb config
 echo "[STAR] Building ISO..."
 lb build
