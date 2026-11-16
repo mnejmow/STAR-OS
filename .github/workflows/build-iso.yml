@@ -4,7 +4,7 @@ name: Build STAR OS ISO
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, star-lite]
     paths:
       - 'auto/**'
       - 'config/**'
