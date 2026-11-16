@@ -143,12 +143,12 @@ def main():
                 ocr = subprocess.run(["tesseract", str(final_image), "stdout"], capture_output=True, text=True, check=True).stdout
                 (EVIDENCE / (mode + "-ocr.txt")).write_text(ocr)
                 ocr_lower = ocr.lower()
-                # GNOME may render "Type to search" instead of the traditional
-                # "Activities" label in the overview. Accept either signature.
-                desktop_markers = ("activities", "type to search")
+                # XFCE commonly exposes "Applications" or "Whisker Menu" in the panel.
+                # Accept several signatures because fonts/layout can vary.
+                desktop_markers = ("applications", "whisker menu", "xfce", "places")
                 if not any(marker in ocr_lower for marker in desktop_markers):
-                    raise RuntimeError(mode + " did not reach the GNOME desktop; OCR evidence: " + repr(ocr[:500]))
-                results.append(mode + ": GNOME desktop confirmed (%dx%d)" % image.size)
+                    raise RuntimeError(mode + " did not reach the XFCE desktop; OCR evidence: " + repr(ocr[:500]))
+                results.append(mode + ": XFCE desktop confirmed (%dx%d)" % image.size)
                 monitor.close()
             finally:
                 if proc.poll() is None:
