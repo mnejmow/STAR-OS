@@ -5,7 +5,7 @@ cat > /usr/share/star/BUILD-INFO <<'INFO'
 STAR OS 1.0 Stellar Edition
 Design: The Quiet Universe
 Base: Debian 13 Trixie
-Desktop: GNOME
+Desktop: XFCE
 Architecture: amd64
 Profile: Light / 4 GB RAM target
 INFO
