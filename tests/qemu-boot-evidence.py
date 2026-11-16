@@ -145,10 +145,17 @@ def main():
                 ocr_lower = ocr.lower()
                 # XFCE commonly exposes "Applications" or "Whisker Menu" in the panel.
                 # Accept several signatures because fonts/layout can vary.
+                # XFCE panel labels vary by theme/localization. On our current
+                # STAR Lite profile the desktop icons are also stable evidence.
+                # Require either a known XFCE label or at least two of the
+                # standard desktop-icon labels to avoid accepting a boot screen.
                 desktop_markers = ("applications", "whisker menu", "xfce", "places")
-                if not any(marker in ocr_lower for marker in desktop_markers):
+                icon_markers = ("home", "file system", "trash")
+                marker_hits = sum(marker in ocr_lower for marker in desktop_markers)
+                icon_hits = sum(marker in ocr_lower for marker in icon_markers)
+                if marker_hits < 1 and icon_hits < 2:
                     raise RuntimeError(mode + " did not reach the XFCE desktop; OCR evidence: " + repr(ocr[:500]))
-                results.append(mode + ": XFCE desktop confirmed (%dx%d)" % image.size)
+                results.append(mode + ": XFCE desktop confirmed (%dx%d; labels=%d, icons=%d)" % (image.width, image.height, marker_hits, icon_hits))
                 monitor.close()
             finally:
                 if proc.poll() is None:
