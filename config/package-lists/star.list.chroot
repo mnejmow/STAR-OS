@@ -1,4 +1,4 @@
-# STAR OS — Debian 13 / GNOME / Light profile
+# STAR OS — Debian 13 / XFCE / Light profile
 live-boot
 live-config
 live-config-systemd
@@ -6,28 +6,22 @@ systemd
 sudo
 dbus
 network-manager
+network-manager-applet
 pipewire
 pipewire-pulse
 wireplumber
-gnome-shell
-gnome-session
-gdm3
-gnome-control-center
-gnome-settings-daemon
-gnome-console
-nautilus
-gnome-text-editor
-gnome-calculator
-gnome-system-monitor
-gnome-disk-utility
+xfce4
+xfce4-goodies
+xfce4-terminal
+thunar
+thunar-archive-plugin
+xfce4-notifyd
+lightdm
+lightdm-gtk-greeter
+policykit-1-gnome
 gnome-keyring
 gnome-screenshot
 file-roller
-papers
-loupe
-network-manager-applet
-gnome-tweaks
-dconf-cli
 debian-installer-launcher
 firefox-esr
 curl
