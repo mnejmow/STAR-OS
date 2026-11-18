@@ -16,8 +16,6 @@ EVIDENCE = OUT / "install-evidence"
 INSTALL_TIMEOUT = int(os.environ.get("STAR_INSTALL_TIMEOUT", "2700"))
 BOOT_TIMEOUT = int(os.environ.get("STAR_INSTALLED_BOOT_TIMEOUT", "360"))
 
-# This preseed exists only in a temporary initrd created inside CI. It is never
-# added to the published ISO and can only partition the disposable /dev/vda.
 PRESEED = r'''# STAR Light CI-only unattended installation
 d-i debian-installer/locale string en_US.UTF-8
 d-i keyboard-configuration/xkb-keymap select us
@@ -54,51 +52,48 @@ d-i finish-install/reboot_in_progress note
 d-i debian-installer/exit/poweroff boolean true
 '''
 
-
 def run(args, **kwargs):
     print("[STAR-INSTALL] $ " + " ".join(map(str, args)), flush=True)
     return subprocess.run(args, check=True, **kwargs)
 
-
-def iso_paths(name):
-    result = run(
-        ["xorriso", "-indev", str(ISO), "-find", "/", "-type", "f", "-name", name, "-exec", "lsdl"],
-        capture_output=True, text=True,
-    )
+def iso_paths(names):
     found = []
-    for line in result.stdout.splitlines():
-        # xorriso lsdl output ends with the ISO path.
-        match = re.search(r"(/\S+)$", line.strip())
-        if match:
-            found.append(match.group(1))
-    return found
-
+    for name in names:
+        result = run(
+            ["xorriso", "-indev", str(ISO), "-find", "/", "-type", "f",
+             "-name", name, "-exec", "lsdl"],
+            capture_output=True, text=True,
+        )
+        for line in result.stdout.splitlines():
+            # xorriso lsdl output ends with the ISO path; tolerate quoting.
+            match = re.search(r"(/\S+?)(?:['\"])?$", line.strip())
+            if match:
+                found.append(match.group(1))
+    return sorted(set(found))
 
 def extract(iso_path, destination):
     run(
-        ["xorriso", "-osirrox", "on", "-indev", str(ISO), "-extract", iso_path, str(destination)],
+        ["xorriso", "-osirrox", "on", "-indev", str(ISO),
+         "-extract", iso_path, str(destination)],
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
     )
 
-
 def prepare_installer(work):
-    kernels = iso_paths("vmlinuz")
-    initrds = set(iso_paths("initrd.gz")) | set(iso_paths("initrd"))
+    kernels = iso_paths(["vmlinuz", "vmlinuz.efi"])
+    initrds = iso_paths(["initrd.gz", "initrd", "initrd.img"])
     pairs = []
     for kernel in kernels:
-        parts = [part.lower() for part in pathlib.PurePosixPath(kernel).parts]
-        if not any(part.startswith("install") for part in parts):
-            continue
         parent = str(pathlib.PurePosixPath(kernel).parent).rstrip("/")
-        for name in ("initrd.gz", "initrd"):
-            candidate = parent + "/" + name
-            if candidate in initrds:
-                pairs.append((kernel, candidate))
+        for initrd in initrds:
+            if str(pathlib.PurePosixPath(initrd).parent).rstrip("/") == parent:
+                pairs.append((kernel, initrd))
     print("[STAR-INSTALL] Installer kernel candidates: " + repr(kernels), flush=True)
-    print("[STAR-INSTALL] Installer initrd candidates: " + repr(sorted(initrds)), flush=True)
+    print("[STAR-INSTALL] Installer initrd candidates: " + repr(initrds), flush=True)
     if not pairs:
         raise RuntimeError("No matching Debian Installer kernel/initrd pair was found in the ISO")
 
+    # Prefer a classic Debian Installer path when several pairs are present.
+    pairs.sort(key=lambda pair: (0 if "install" in pair[0].lower() else 1, pair[0]))
     kernel_path, initrd_path = pairs[0]
     kernel = work / "installer-vmlinuz"
     original = work / "installer-initrd"
@@ -112,8 +107,10 @@ def prepare_installer(work):
     root.mkdir()
     gunzip = subprocess.Popen(["gzip", "-dc", str(original)], stdout=subprocess.PIPE)
     with (root / "unpack.log").open("wb") as log:
-        cpio = subprocess.run(["cpio", "-id", "--quiet"], cwd=root, stdin=gunzip.stdout,
-                              stdout=log, stderr=log)
+        cpio = subprocess.run(
+            ["cpio", "-id", "--quiet"], cwd=root, stdin=gunzip.stdout,
+            stdout=log, stderr=log,
+        )
     gunzip.stdout.close()
     if gunzip.wait() != 0 or cpio.returncode != 0:
         raise RuntimeError("Could not unpack the Debian Installer initrd")
@@ -128,7 +125,6 @@ def prepare_installer(work):
             raise RuntimeError("Could not repack the test-only installer initrd")
     print("[STAR-INSTALL] Selected " + kernel_path + " + " + initrd_path, flush=True)
     return kernel, modified
-
 
 def install_disk(work, kernel, initrd):
     disk = work / "star-install-test.qcow2"
@@ -156,7 +152,6 @@ def install_disk(work, kernel, initrd):
     print("[STAR-INSTALL] Installer powered off; starting disk-only verification", flush=True)
     return disk
 
-
 def monitor_connect(path, process, timeout):
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline and process.poll() is None:
@@ -165,13 +160,11 @@ def monitor_connect(path, process, timeout):
             sock.settimeout(5)
             try:
                 sock.connect(str(path))
-                sock.recv(4096)
                 return sock
             except OSError:
                 sock.close()
         time.sleep(1)
     raise RuntimeError("Installed QEMU monitor did not become available")
-
 
 def monitor_cmd(sock, command):
     sock.sendall((command + "\n").encode())
@@ -180,7 +173,6 @@ def monitor_cmd(sock, command):
         return sock.recv(65536).decode(errors="replace")
     except socket.timeout:
         return ""
-
 
 def verify_disk_boot(disk):
     monitor_path = EVIDENCE / "installed.monitor"
@@ -238,7 +230,6 @@ def verify_disk_boot(disk):
                     proc.kill()
                     proc.wait()
 
-
 def main():
     if not ISO.is_file():
         raise SystemExit("ISO missing: " + str(ISO))
@@ -257,7 +248,6 @@ def main():
     )
     (EVIDENCE / "RESULTS.txt").write_text(result, encoding="utf-8")
     print(result, flush=True)
-
 
 if __name__ == "__main__":
     main()
