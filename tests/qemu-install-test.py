@@ -68,7 +68,7 @@ def iso_paths(name):
     found = []
     for line in result.stdout.splitlines():
         # xorriso lsdl output ends with the ISO path.
-        match = re.search(r"(/[^\\s]+)$", line.strip())
+        match = re.search(r"(/\S+)$", line.strip())
         if match:
             found.append(match.group(1))
     return found
