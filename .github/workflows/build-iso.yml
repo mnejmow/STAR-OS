@@ -63,13 +63,75 @@ jobs:
           sha256sum STAR-1.0-amd64.iso > STAR-1.0-amd64.iso.full.sha256
           test -n "$(find . -maxdepth 1 -type f -name 'STAR-1.0-amd64.iso.part-*' -print -quit)"
           ls -lh STAR-1.0-amd64.iso.part-* STAR-1.0-amd64.iso.full.sha256
-      - name: Upload all ISO parts and full checksum
+      - name: Upload ISO part 00 as a separate artifact
+        if: hashFiles('output/STAR-1.0-amd64.iso.part-00') != ''
         uses: actions/upload-artifact@v4
         with:
-          name: STAR-OS-1.0-parts
-          path: |
-            output/STAR-1.0-amd64.iso.part-*
-            output/STAR-1.0-amd64.iso.full.sha256
+          name: STAR-OS-1.0-part-00
+          path: output/STAR-1.0-amd64.iso.part-00
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload ISO part 01 as a separate artifact
+        if: hashFiles('output/STAR-1.0-amd64.iso.part-01') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: STAR-OS-1.0-part-01
+          path: output/STAR-1.0-amd64.iso.part-01
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload ISO part 02 as a separate artifact
+        if: hashFiles('output/STAR-1.0-amd64.iso.part-02') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: STAR-OS-1.0-part-02
+          path: output/STAR-1.0-amd64.iso.part-02
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload ISO part 03 as a separate artifact
+        if: hashFiles('output/STAR-1.0-amd64.iso.part-03') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: STAR-OS-1.0-part-03
+          path: output/STAR-1.0-amd64.iso.part-03
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload ISO part 04 as a separate artifact
+        if: hashFiles('output/STAR-1.0-amd64.iso.part-04') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: STAR-OS-1.0-part-04
+          path: output/STAR-1.0-amd64.iso.part-04
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload ISO part 05 as a separate artifact
+        if: hashFiles('output/STAR-1.0-amd64.iso.part-05') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: STAR-OS-1.0-part-05
+          path: output/STAR-1.0-amd64.iso.part-05
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload ISO part 06 as a separate artifact
+        if: hashFiles('output/STAR-1.0-amd64.iso.part-06') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: STAR-OS-1.0-part-06
+          path: output/STAR-1.0-amd64.iso.part-06
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload ISO part 07 as a separate artifact
+        if: hashFiles('output/STAR-1.0-amd64.iso.part-07') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: STAR-OS-1.0-part-07
+          path: output/STAR-1.0-amd64.iso.part-07
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload full ISO checksum separately
+        uses: actions/upload-artifact@v4
+        with:
+          name: STAR-OS-1.0-full-checksum
+          path: output/STAR-1.0-amd64.iso.full.sha256
           if-no-files-found: error
           retention-days: 14
       - name: Upload ISO checksum and test evidence
