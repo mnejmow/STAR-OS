@@ -29,7 +29,7 @@ jobs:
             live-build debootstrap squashfs-tools xorriso \
             grub-pc-bin grub-efi-amd64-bin isolinux syslinux-common \
             mtools dosfstools rsync ca-certificates gnupg apt-utils \
-            qemu-system-x86 qemu-system-gui ovmf xvfb xauth python3 python3-pil tesseract-ocr
+            qemu-system-x86 qemu-system-gui qemu-utils cpio ovmf xvfb xauth python3 python3-pil tesseract-ocr
       - uses: actions/checkout@v4
       - name: Set executable permissions
         run: chmod +x auto/config build.sh clean.sh test-qemu.sh config/hooks/normal/*.hook.chroot
@@ -45,12 +45,19 @@ jobs:
         run: |
           set -euo pipefail
           xvfb-run -a python3 tests/qemu-boot-evidence.py
+      - name: Install STAR Light to a disposable disk and verify disk-only boot
+        shell: bash
+        run: |
+          set -euo pipefail
+          xvfb-run -a python3 tests/qemu-install-test.py
       - name: Upload boot screenshots and logs even when verification fails
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: STAR-OS-boot-evidence
-          path: output/boot-evidence/**
+          path: |
+            output/boot-evidence/**
+            output/install-evidence/**
           if-no-files-found: warn
           retention-days: 14
       - name: Split ISO into download-safe parts
@@ -141,5 +148,6 @@ jobs:
           path: |
             output/STAR-1.0-amd64.iso.sha256
             output/boot-evidence/**
+            output/install-evidence/**
           if-no-files-found: error
           retention-days: 14
