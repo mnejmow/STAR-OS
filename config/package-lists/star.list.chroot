@@ -5,6 +5,7 @@ live-config-systemd
 systemd
 sudo
 dbus
+dbus-x11
 network-manager
 network-manager-applet
 pipewire
