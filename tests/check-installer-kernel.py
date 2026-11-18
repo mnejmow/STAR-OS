@@ -31,7 +31,7 @@ def main():
             check=True, capture_output=True, text=True,
         ).stdout
         live_versions = sorted(set(re.findall(
-            r"(?:squashfs-root/)?(?:usr/)?lib/modules/([^/\\s]+)/?",
+            r"(?:squashfs-root/)?(?:usr/)?lib/modules/([^/\s]+)/?",
             live_listing,
         )))
         if len(live_versions) != 1:
@@ -64,7 +64,7 @@ def main():
             raise SystemExit("Could not read installer initrd")
 
         installer_versions = sorted(set(re.findall(
-            r"(?:^|\\n)(?:\\./)?lib/modules/([^/\\n]+)/?",
+            r"(?:^|\n)(?:\./)?lib/modules/([^/\n]+)(?:/|$)",
             listing,
         )))
         if len(installer_versions) != 1:
