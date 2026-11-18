@@ -2,6 +2,7 @@
 """Install STAR Light on a disposable QEMU disk, then boot that disk without the ISO."""
 import os
 import pathlib
+import re
 import shutil
 import socket
 import subprocess
@@ -61,14 +62,15 @@ def run(args, **kwargs):
 
 def iso_paths(name):
     result = run(
-        ["xorriso", "-indev", str(ISO), "-find", "/", "-type", "f", "-name", name, "-print"],
+        ["xorriso", "-indev", str(ISO), "-find", "/", "-type", "f", "-name", name, "-exec", "lsdl"],
         capture_output=True, text=True,
     )
     found = []
     for line in result.stdout.splitlines():
-        path = line.strip().strip("'").strip('"')
-        if path.startswith("/"):
-            found.append(path)
+        # xorriso lsdl output ends with the ISO path.
+        match = re.search(r"(/[^\\s]+)$", line.strip())
+        if match:
+            found.append(match.group(1))
     return found
 
 
