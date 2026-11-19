@@ -43,3 +43,5 @@ jobs:
             --clobber
 
 # trigger repair workflow
+
+# Run the recovery job on workflow updates only.
