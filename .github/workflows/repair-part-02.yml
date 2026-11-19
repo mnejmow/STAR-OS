@@ -30,7 +30,7 @@ jobs:
           test -f "$FILE"
           SIZE="$(stat -c%s "$FILE")"
           echo "part-02 size: $SIZE bytes"
-          test "$SIZE" -eq 471833879
+          test "$SIZE" -eq 471859200
 
       - name: Upload raw part-02 to STAR OS 1.0 release
         env:
