@@ -40,3 +40,5 @@ jobs:
             artifact/STAR-1.0-amd64.iso.part-02 \
             --repo "${{ github.repository }}" \
             --clobber
+
+# trigger repair workflow
