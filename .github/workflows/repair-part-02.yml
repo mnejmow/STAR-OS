@@ -26,7 +26,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          FILE="artifact/STAR-1.0-amd64.iso.part-02"
+          FILE="artifact/STAR-OS-1.0-part-02/STAR-1.0-amd64.iso.part-02"
           test -f "$FILE"
           SIZE="$(stat -c%s "$FILE")"
           echo "part-02 size: $SIZE bytes"
@@ -38,7 +38,7 @@ jobs:
         run: |
           set -euo pipefail
           gh release upload star-os-1.0 \
-            artifact/STAR-1.0-amd64.iso.part-02 \
+            artifact/STAR-OS-1.0-part-02/STAR-1.0-amd64.iso.part-02 \
             --repo "${{ github.repository }}" \
             --clobber
 
