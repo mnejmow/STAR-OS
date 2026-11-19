@@ -1,0 +1,42 @@
+name: Repair STAR OS Release Part 02
+
+on:
+  push:
+    branches: [star-lite]
+    paths:
+      - '.github/workflows/repair-part-02.yml'
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  upload-part-02:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download part-02 from Run #36 artifact
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: 14480843521
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: artifact
+
+      - name: Verify raw part
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILE="artifact/STAR-1.0-amd64.iso.part-02"
+          test -f "$FILE"
+          SIZE="$(stat -c%s "$FILE")"
+          echo "part-02 size: $SIZE bytes"
+          test "$SIZE" -eq 471833879
+
+      - name: Upload raw part-02 to STAR OS 1.0 release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh release upload star-os-1.0 \
+            artifact/STAR-1.0-amd64.iso.part-02 \
+            --repo "${{ github.repository }}" \
+            --clobber
